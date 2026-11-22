@@ -1346,8 +1346,14 @@ def _render_skills_index(
             + "\n<available_skills>\n" + "\n".join(index_lines) + "\n</available_skills>"
             + hidden_note
         )
-    return (
-        "## Skills\n"
+    theseus_desktop = os.getenv("VITE_THESEUS_DESKTOP") == "1"
+    skills_policy = (
+        "For a question about the contents of a named file, open that file first with the appropriate reader. "
+        "Load a skill only if the requested operation needs its workflow. Reading a handoff or suggesting a next "
+        "measurement alone does not require a project or investigation lookup. Once the requested facts and their "
+        "limits are clear, answer. Quote recorded values directly. Skip optional calculations when those values already answer the question. If a necessary detail is missing, use a specifically relevant additional source "
+        "when requested or when it could resolve that detail. Follow explicitly requested skills and project changes."
+        if theseus_desktop else
         "Before replying, scan the skills below. If a skill matches or is even partially relevant to your "
         "task, you MUST load it with skill_view(name) and follow its instructions. Err on the side of "
         "loading — it is always better to have context you don't need than to miss critical steps, pitfalls, "
@@ -1356,7 +1362,10 @@ def _render_skills_index(
         f"even if you think you could handle the task with basic tools like {_basic_tools}. "
         "Skills also encode the user's preferred approach, conventions, and quality standards for tasks like "
         "code review, planning, and testing — load them even for tasks you already know how to do, because "
-        "the skill defines how it should be done here.\n"
+        "the skill defines how it should be done here."
+    )
+    return (
+        "## Skills\n" + skills_policy + "\n"
         "If a skill has issues, fix it with skill_manage(action='patch').\n"
         "After difficult/iterative tasks, offer to save as a skill. If a skill you loaded was missing steps, "
         "had wrong commands, or needed pitfalls you discovered, update it before finishing.\n"
@@ -1364,7 +1373,7 @@ def _render_skills_index(
         "<available_skills>\n"
         + "\n".join(index_lines) + "\n"
         "</available_skills>\n\n"
-        "Only proceed without loading a skill if genuinely none are relevant to the task."
+        + ("" if theseus_desktop else "Only proceed without loading a skill if genuinely none are relevant to the task.")
         + hidden_note
     )
 
@@ -1396,6 +1405,7 @@ def _build_skills_system_prompt_inner(
         tuple(sorted(str(ts) for ts in (available_toolsets or set()))),
         _platform_hint, tuple(sorted(disabled)), tuple(sorted(compact_categories or ())),
         _oneshot_prompt_variant(), tuple(plugin_rows), get_skill_desc_limit(),
+        os.getenv("VITE_THESEUS_DESKTOP") == "1",
     )
     snapshot = _load_skills_snapshot(skills_dir, manifest)
     app_gated = snapshot is not None and any(

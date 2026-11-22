@@ -489,9 +489,11 @@ export function actInPageCore(
 
     const spot = pointAt(el)
     const tag = el.tagName
+    const anchor = el.closest('a[href]') as HTMLAnchorElement | null
 
     return answer({
       acted: 'looking at ' + describe(el),
+      destination: anchor && /^https?:$/.test(anchor.protocol) ? anchor.href : undefined,
       point: { x: spot.clientX, y: spot.clientY },
       success: true,
       tag,

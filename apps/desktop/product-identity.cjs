@@ -104,7 +104,12 @@ const officialChannel =
     key => request.identity[key] === identity[key]
   )
 
-module.exports = !request
+const theseus = process.env.THESEUS_PACKAGE === '1'
+module.exports = theseus ? Object.freeze({
+  ...identity, displayName: 'Theseus', appId: 'local.theseus.desktop',
+  appNamePascal: 'Theseus', artifactNamePascal: 'Theseus', cliName: 'theseus',
+  windowsExecutableName: 'Theseus', msixAppIdWithOrg: 'Local.Theseus', channel: null
+}) : !request
   ? identity
   : Object.freeze(
       officialChannel

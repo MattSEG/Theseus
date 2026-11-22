@@ -86,6 +86,8 @@ export interface PreviewActAction {
 }
 
 export interface PreviewActResult {
+  /** Resolved ordinary link during locate, used to check the destination after input. */
+  destination?: string
   /** What the action landed on, for the agent's own log. */
   acted?: string
   /** What moved since the last look. Present INSTEAD of `elements` once the

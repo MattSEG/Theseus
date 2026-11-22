@@ -734,6 +734,7 @@ import { readWslWindowsClipboardImage } from './wsl-clipboard-image'
 import { resolvePickerDefaultPath, setActiveGatewayProfile, setWslBridgeProfileState } from './wsl-path-bridge'
 
 const IDENTITY_APP_NAME: string | null = applyDesktopIdentity(app)
+const DESKTOP_WINDOW_TITLE = process.env.VITE_THESEUS_DESKTOP === '1' ? 'Theseus Desktop' : 'Hermes'
 const USER_DATA_OVERRIDE: string | undefined = process.env.HERMES_DESKTOP_USER_DATA_DIR
 
 if (USER_DATA_OVERRIDE || process.env.HERMES_DATA_DIR_SUFFIX) {
@@ -1497,6 +1498,15 @@ function writePersistedTranslucency(state) {
   }
 }
 
+const opacityPath = path.join(app.getPath('userData'), 'theseus-window-opacity.json')
+function validWindowOpacity(value) {
+  return Number.isInteger(value) && value >= 30 && value <= 100
+}
+let explicitWindowOpacity = null
+try {
+  const value = JSON.parse(fs.readFileSync(opacityPath, 'utf8')).percent
+  if (validWindowOpacity(value)) explicitWindowOpacity = value
+} catch { /* Fresh profile or missing preference. */ }
 let translucencyState = readPersistedTranslucency()
 
 // Chat windows whose webContents backing follows translucency (primary,
@@ -1510,7 +1520,7 @@ const translucencyBackedWindows = new WeakSet()
 // window's own opacity is the record of whether that door was ever opened; see
 // opacityNeedsSetting for why it matters that it stays shut.
 function applyWindowOpacity(win) {
-  const opacity = nativeOpacityFor(translucencyState, TRANSLUCENCY_SUPPORTED)
+  const opacity = explicitWindowOpacity == null ? nativeOpacityFor(translucencyState, TRANSLUCENCY_SUPPORTED) : explicitWindowOpacity / 100
 
   if (typeof win.setOpacity === 'function' && opacityNeedsSetting(opacity, win.getOpacity?.() ?? 1)) {
     win.setOpacity(opacity)
@@ -1610,7 +1620,7 @@ function chatWindowSurfaceOptions() {
     // RESIZABLE transparent window is unsupported and breaks (electron#48421).
     // Every chat window is resizable.
     ...windowBackgroundMaterialOptions(translucencyState, IS_WINDOWS, GLASS_SUPPORTED),
-    ...windowOpacityOptions(translucencyState, TRANSLUCENCY_SUPPORTED),
+    ...(explicitWindowOpacity == null ? windowOpacityOptions(translucencyState, TRANSLUCENCY_SUPPORTED) : explicitWindowOpacity < 100 ? { opacity: explicitWindowOpacity / 100 } : {}),
     ...windowBackingOptions(translucencyState, getWindowBackgroundColor())
   }
 }
@@ -3438,6 +3448,7 @@ function resolvePackagedUpdateStrategy(): Promise<UpdaterStrategy | null> {
 }
 
 async function createPackagedUpdateStrategy(): Promise<UpdaterStrategy | null> {
+  if (PRODUCT_IDENTITY.appId === 'local.theseus.desktop') return null
   const mechanism = resolveUpdaterMechanism({
     platform: process.platform,
     updateMechanism: INSTALL_STAMP?.updateMechanism,
@@ -11877,7 +11888,7 @@ function spawnSecondaryWindow({
     height: SESSION_WINDOW_MIN_HEIGHT,
     minWidth: SESSION_WINDOW_MIN_WIDTH,
     minHeight: SESSION_WINDOW_MIN_HEIGHT,
-    title: 'Hermes',
+    title: DESKTOP_WINDOW_TITLE,
     titleBarStyle: 'hidden',
     titleBarOverlay: getTitleBarOverlayOptions(),
     trafficLightPosition: IS_MAC ? WINDOW_BUTTON_POSITION : undefined,
@@ -11982,7 +11993,7 @@ function spawnBrowserWindow(tabId) {
     height: BROWSER_WINDOW_HEIGHT,
     minWidth: BROWSER_WINDOW_MIN_WIDTH,
     minHeight: BROWSER_WINDOW_MIN_HEIGHT,
-    title: 'Hermes',
+    title: DESKTOP_WINDOW_TITLE,
     titleBarStyle: 'hidden',
     titleBarOverlay: getTitleBarOverlayOptions(),
     trafficLightPosition: IS_MAC ? WINDOW_BUTTON_POSITION : undefined,
@@ -12094,7 +12105,7 @@ function createInstanceWindow(
     ...nextInstanceBounds(source),
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
-    title: 'Hermes',
+    title: DESKTOP_WINDOW_TITLE,
     titleBarStyle: 'hidden',
     titleBarOverlay: getTitleBarOverlayOptions(),
     trafficLightPosition: IS_MAC ? WINDOW_BUTTON_POSITION : undefined,
@@ -13179,7 +13190,7 @@ function createWindow() {
     ),
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
-    title: 'Hermes',
+    title: DESKTOP_WINDOW_TITLE,
     // Frameless title bar on every platform so the renderer can paint the
     // "hide sidebar" button (and other left-side titlebar tools) flush with
     // the top edge — matching the macOS layout where the traffic lights sit
@@ -16252,6 +16263,25 @@ app.on('quit', () => {
 // Answered synchronously so preload can publish the verdict before the
 // renderer's first script — see the note there on why it cannot decide this
 // itself. Registered at module scope, which runs long before any window.
+ipcMain.handle('theseus:window-opacity', (event, request) => {
+  const sender = BrowserWindow.fromWebContents(event.sender)
+  if (!sender || !translucencyBackedWindows.has(sender) || !TRANSLUCENCY_SUPPORTED) {
+    throw new Error('Window opacity is unavailable on this surface.')
+  }
+  if (request?.action === 'set') {
+    const value = request.percent
+    if (value !== null && !validWindowOpacity(value)) throw new Error('Use an opacity from 30 to 100 percent.')
+    const temp = opacityPath + '.tmp'
+    fs.writeFileSync(temp, JSON.stringify({percent:value}), { mode: 0o600 })
+    fs.renameSync(temp, opacityPath)
+    explicitWindowOpacity = value
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (translucencyBackedWindows.has(win) && !win.isDestroyed()) applyWindowOpacity(win)
+    }
+  }
+  return { percent: explicitWindowOpacity, actual: Math.round(sender.getOpacity()*100) }
+})
+
 ipcMain.on('hermes:translucency:support', event => {
   event.returnValue = { glass: GLASS_SUPPORTED, translucency: TRANSLUCENCY_SUPPORTED }
 })
@@ -17164,7 +17194,7 @@ ipcMain.handle('hermes:vscode-theme:search', async (_event, query) => searchMark
 // running app. Three delivery paths: macOS 'open-url',
 // Win/Linux running-app 'second-instance' (argv), Win/Linux cold-start argv.
 // ---------------------------------------------------------------------------
-const HERMES_PROTOCOL = DEV_SERVER ? 'hermes-dev' : 'hermes'
+const HERMES_PROTOCOL = PRODUCT_IDENTITY.appId === 'local.theseus.desktop' ? 'theseus' : DEV_SERVER ? 'hermes-dev' : 'hermes'
 /** Schemes accepted when parsing inbound URLs (dev accepts both). */
 const DEEPLINK_SCHEMES = DEV_SERVER ? ['hermes-dev', 'hermes'] : ['hermes']
 let _pendingDeepLink = null
@@ -17607,7 +17637,7 @@ function heldQuitForActiveWork(event: Electron.Event): boolean {
   // before the guard runs), so merge in the last summary any renderer sent.
   const work = mergeActiveWork([...activeWorkByWebContents.values(), lastActiveWorkSeen])
 
-  const prompt = quitPromptFor(work, isQuittingForHandoff, quitStopsBackendWork())
+  const prompt = quitPromptFor(work, isQuittingForHandoff, quitStopsBackendWork(), PRODUCT_IDENTITY.displayName)
 
   // A tray quit with live work still needs the ordinary visible confirmation.
   if (prompt && minimizeToTray.status().available) {

@@ -277,6 +277,21 @@ class TestBuildSkillsSystemPrompt:
         assert result.count("- search") == 1
 
 
+    def test_named_file_policy_is_scoped_to_theseus_desktop(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        skill = tmp_path / "skills" / "tools" / "sample"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\ndescription: Sample workflow\n---\n")
+        monkeypatch.delenv("VITE_THESEUS_DESKTOP", raising=False)
+        standard = build_skills_system_prompt()
+        monkeypatch.setenv("VITE_THESEUS_DESKTOP", "1")
+        desktop = build_skills_system_prompt()
+        assert "named file" in desktop
+        assert "even partially relevant" in standard
+        assert "Sample workflow" in desktop
+        monkeypatch.delenv("VITE_THESEUS_DESKTOP")
+        assert build_skills_system_prompt() == standard
+
     def test_compact_categories_demote_nested_and_miss_cache_separately(
         self, monkeypatch, tmp_path
     ):

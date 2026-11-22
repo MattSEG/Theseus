@@ -45,9 +45,7 @@ async function steer(page: Page, text: string): Promise<void> {
   await composer.waitFor({ state: 'visible', timeout: 15_000 })
   await composer.click()
   await composer.type(text, { delay: 5 })
-  // Since "running is not busy" (3bc52fb9df) the primary keeps the Send label
-  // mid-turn; the submit engine still routes a text payload to steer.
-  await expect(primary).toHaveAttribute('aria-label', 'Send')
+  await expect(primary).toHaveAttribute('aria-label', 'Redirect the current run')
   await primary.click()
 }
 

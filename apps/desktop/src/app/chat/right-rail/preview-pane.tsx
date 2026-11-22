@@ -13,6 +13,8 @@ import { PreviewDocumentFrame } from '@/components/ui/preview-document-frame'
 import { Tip } from '@/components/ui/tooltip'
 import { type Translations, useI18n } from '@/i18n'
 import { isDesktopFsRemoteMode, isReadFileErrorResult } from '@/lib/desktop-fs'
+import { downloadBlob } from '@/lib/download'
+import { dataUrlToBlob } from '@/lib/embedded-images'
 import { guardGuestPointers } from '@/lib/guest-pointer-guard'
 import { hostHas } from '@/lib/host-capabilities'
 import { isLoopbackPreviewUrl, openPreviewTargetInBrowser, remoteHtmlPreviewDocument } from '@/lib/local-preview'
@@ -495,6 +497,27 @@ export function PreviewPane({
       navigationRef.current?.reload?.()
     }
   }, [isWebPreview])
+
+  const captureViewport = async () => {
+    try {
+      const id = webviewRef.current?.getWebContentsId?.()
+
+      if (typeof id !== 'number') {
+        throw new Error('Preview is not ready')
+      }
+
+      const data = await window.hermesDesktop.capturePreview?.({ webContentsId: id })
+      const blob = data && dataUrlToBlob(data)
+
+      if (!blob || blob.type !== 'image/png') {
+        throw new Error('Preview capture returned no PNG')
+      }
+
+      downloadBlob(blob, 'theseus-preview.png')
+    } catch (error) {
+      notifyError(error, t.preview.unavailable)
+    }
+  }
 
   const annotateGuest = useCallback(() => createPreviewAnnotateGuest(webviewRef.current), [])
 
@@ -1509,6 +1532,7 @@ export function PreviewPane({
             devToolsOpen={devtoolsOpen}
             loading={loading}
             onBack={goBack}
+            onCapture={window.hermesDesktop?.capturePreview ? () => void captureViewport() : undefined}
             onClose={onClose}
             onFlushComments={() => void flushComments()}
             onForward={goForward}

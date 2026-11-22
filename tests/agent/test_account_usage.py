@@ -398,3 +398,12 @@ def test_codex_usage_401_retry_refreshes_the_explicit_credential_not_another_acc
     assert snapshot is not None
     assert refresh_hints == ["pool-B-revoked"]
     assert request_calls == ["Bearer pool-B-revoked", "Bearer pool-B-fresh"]
+
+
+def test_codex_extra_allowance_keeps_model_scope(monkeypatch):
+    payload = {"rate_limit": {"primary_window": {"used_percent": 26, "limit_window_seconds": 604800}},
+               "additional_rate_limits": [{"limit_name": "Example family", "rate_limit": {
+                   "primary_window": {"used_percent": 99, "limit_window_seconds": 18000}}}]}
+    snapshot, _ = _explicit_creds_snapshot(monkeypatch, payload)
+    assert [(w.label, w.used_percent, w.scope) for w in snapshot.windows] == [
+        ("Weekly", 26, "account"), ("Example family Session", 99, "model")]

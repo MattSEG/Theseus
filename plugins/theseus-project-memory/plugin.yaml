@@ -1,0 +1,11 @@
+name: theseus-project-memory
+version: "0.1.0"
+description: "Apply current project decisions to ordinary Theseus conversations and artifact tools."
+provides_hooks:
+  - pre_llm_call
+  - pre_tool_call
+provides_tools:
+  - investigation_lookup
+  - research_library
+  - research_brief
+  - research_planning

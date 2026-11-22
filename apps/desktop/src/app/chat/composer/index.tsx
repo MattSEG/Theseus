@@ -1533,6 +1533,11 @@ export function ChatBar({
               the pop-out drag region. Same px as the strip above, so the two
               bracket the composer on one vertical line. */}
           <div className={cn(composerFloatingStrip, 'px-[5px] pt-1.5 empty:hidden')}>
+            {state.allowance && (
+              <small className="block max-w-full truncate text-[10px] text-muted-foreground" title={state.allowance}>
+                {state.allowance}
+              </small>
+            )}
             <ContribSlot area={COMPOSER_AREAS.underside} />
           </div>
         </div>

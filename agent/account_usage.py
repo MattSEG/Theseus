@@ -350,6 +350,16 @@ def _fetch_codex_account_usage_impl(
         )
     rate_limit = payload.get("rate_limit") or {}
     windows = _usage_windows(rate_limit, _codex_window_labels(rate_limit), "used_percent", "reset_at")
+    for extra in payload.get("additional_rate_limits") or ():
+        if not isinstance(extra, dict):
+            continue
+        label = extra.get("limit_name") or extra.get("metered_feature")
+        limits = extra.get("rate_limit")
+        if not isinstance(label, str) or not isinstance(limits, dict):
+            continue
+        mapping = tuple((key, f"{label} {period}") for key, period in _codex_window_labels(limits))
+        windows.extend(_usage_windows(limits, mapping, "used_percent", "reset_at",
+                                     model_scoped={key for key, _ in mapping}))
     details: list[str] = []
     count = _codex_banked_resets(payload)
     if count > 0:

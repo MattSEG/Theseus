@@ -5,7 +5,9 @@ import { useMemo } from 'react'
 
 import type { HermesGateway } from '@/hermes'
 import { quickModelOptions } from '@/lib/chat-runtime'
-import { currentModelCapabilities, modelOptionsQueryKey, requestModelOptions } from '@/lib/model-options'
+import { currentModelCapabilities, findCatalogProvider, modelOptionsQueryKey, requestModelOptions } from '@/lib/model-options'
+
+import { theseusAllowance } from '@/lib/theseus-allowance'
 
 import type { ChatBarState } from './composer/types'
 
@@ -53,8 +55,15 @@ export function useChatBarState({
         request: requestModelOptionsForOwner,
         sessionId: activeSessionId
       }),
+    refetchInterval: import.meta.env.VITE_THESEUS_DESKTOP === '1' ? 60_000 : false,
     enabled: gatewayOpen
   })
+
+  const catalog = modelOptionsQuery.data
+  const row = findCatalogProvider(catalog?.providers ?? [], currentProvider || catalog?.provider || '')
+  const allowance = import.meta.env.VITE_THESEUS_DESKTOP === '1' && gatewayOpen
+    ? theseusAllowance(row, currentModel || catalog?.model || '')
+    : undefined
 
   const quickModels = useMemo(
     () => quickModelOptions(modelOptionsQuery.data, currentProvider, currentModel),
@@ -68,6 +77,7 @@ export function useChatBarState({
 
   return useMemo<ChatBarState>(
     () => ({
+      allowance,
       model: {
         model: currentModel,
         provider: currentProvider,
@@ -91,6 +101,7 @@ export function useChatBarState({
       }
     }),
     [
+      allowance,
       contextSuggestions,
       currentModel,
       currentProvider,

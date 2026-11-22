@@ -1,9 +1,10 @@
 # Hermes Agent - Development Guide
 
-This root file is a hub: what applies everywhere, then a routing table. Each area's `AGENTS.md`
-loads automatically when you work in that directory; read it before editing there.
-`python scripts/check` caps this file at 12k chars and every root-to-area chain at 30k: long form
-goes in `website/docs/developer-guide/`.
+Discover fork commands with `./theseus --help`. Inspect learning jobs by key with `./theseus learning inspect KEY`.
+
+Use Sol and Opus for routine paid-model investigation trials. Skip GLM in testing unless Matt explicitly requests it for a particular run.
+
+Read the area's `AGENTS.md` before edits. `python scripts/check` caps root/chain at 12k/30k characters. Longer guides go in `website/docs/developer-guide/`.
 
 **Never give up on the right solution.**
 

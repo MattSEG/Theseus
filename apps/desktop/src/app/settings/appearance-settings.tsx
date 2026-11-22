@@ -1,3 +1,5 @@
+import { AmbientSettings } from '../theseus-appearance/ambient'
+import { WindowOpacity } from '../theseus-appearance/opacity'
 import { useStore } from '@nanostores/react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -712,6 +714,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
             </>
           )}
 
+          {show('window-layout') && import.meta.env.VITE_THESEUS_DESKTOP==='1' && <><WindowOpacity/><AmbientSettings/></>}
           {show('window-layout') && (
             <ListRow
               action={

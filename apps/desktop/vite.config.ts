@@ -137,7 +137,15 @@ const emojibaseAssets = () => ({
 
 export default defineConfig(({ command }) => ({
   base: './',
-  plugins: [react(), cachedCompilerPass(command), tailwindcss(), emojibaseAssets()],
+  plugins: [
+    react(), cachedCompilerPass(command), tailwindcss(), emojibaseAssets(),
+    ...(process.env.VITE_THESEUS_DESKTOP === '1' ? [{
+      name: 'theseus-document-identity',
+      transformIndexHtml: { order: 'pre' as const, handler: (html: string) => html
+        .replace('<title>Hermes</title>', '<title>Theseus</title>')
+        .replaceAll('/apple-touch-icon.png', '/assets/theseus/welcome.png') }
+    }] : [])
+  ],
   css: {
     // Pin an explicit (empty) PostCSS config. Tailwind is handled entirely by
     // `@tailwindcss/vite`, so the renderer needs no PostCSS plugins — and

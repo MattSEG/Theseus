@@ -19,6 +19,7 @@ export interface QuickModelOption {
 }
 
 export interface ChatBarState {
+  allowance?: string
   model: {
     model: string
     provider: string

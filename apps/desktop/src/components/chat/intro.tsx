@@ -3,8 +3,10 @@ import { useState } from 'react'
 import { useI18n } from '@/i18n'
 import { capitalize, normalize } from '@/lib/text'
 
+import shipIcon from '../../../assets/theseus/welcome.png'
 import introCopyJsonl from './intro-copy.jsonl?raw'
 import { Wordmark } from './wordmark'
+import './theseus-welcome.css'
 
 type IntroCopy = {
   headline: string
@@ -161,6 +163,18 @@ function resolveCopy(personality?: string, seed?: number): IntroCopy {
 export function Intro({ personality, seed }: IntroProps) {
   const [mountSeed] = useState(() => Math.floor(Math.random() * 100000))
   const { t } = useI18n()
+  if (import.meta.env.VITE_THESEUS_DESKTOP === '1') {
+    return (
+      <div data-slot="aui_intro" className="theseus-welcome">
+        <div className="theseus-welcome__signature">
+          <img src={shipIcon} width={64} height={64} alt="" />
+          <h1>Theseus</h1>
+        </div>
+        <p>What would you like to explore or get done?</p>
+      </div>
+    )
+  }
+
   const rotationSeed = mountSeed + (seed ?? 0)
   const copy = resolveCopy(personality, rotationSeed)
   const key = normalizeKey(personality)

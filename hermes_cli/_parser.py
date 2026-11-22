@@ -274,6 +274,7 @@ def _build_chat_parser(subparsers) -> argparse.ArgumentParser:
     add("-v", "--verbose", action="store_true", default=SUPPRESS, help="Verbose output")
     add("-Q", "--quiet", action="store_true",
         help="Quiet mode for programmatic use: suppress banner, spinner, and tool previews. Only output the final response and session info.")
+    add("--request-key", metavar="KEY", help="For a structured single query, retry the same saved gateway turn with this key.")
     add("--format", choices=["text", "stream-json"], default="text", dest="output_format", help=(
         "Output format for single-query mode (-q). 'text' prints the final response as plain text (default). "
         "'stream-json' emits newline-delimited JSON events (JSONL), implies --quiet, and cannot be combined with --tui."))

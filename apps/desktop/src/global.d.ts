@@ -421,6 +421,7 @@ declare global {
       /** Main-process fact: this OS can back glass with a native material. */
       glassSupported?: boolean
       /** Main-process fact: this OS can do any translucency at all (not Linux). */
+      windowOpacity?: (request: {action: "get" | "set";percent?:number|null}) => Promise<{percent:number|null;actual:number}>
       translucencySupported?: boolean
       /** Feature flag: the local-models UI is enabled. */
       localModelsEnabled?: boolean

@@ -105,6 +105,7 @@ class GatewayChatView:
         self.unattended = False  # `-z`: the classic one-shot auto-approves; `-q` stays single-query
         self.resume_footer = False  # `chat -q` without -Q: main's "Resume this session with:" block
         self.launch_api_key = None  # `--api-key` of this terminal's launch; never durable (/new reuses it)
+        self.request_input_id = None
         self.finite_admission = None
         self._finite_events = []
         self.streams = {}
@@ -204,7 +205,7 @@ class GatewayChatView:
     async def _recover(self, admission, sid):
         """Queued: it lost nothing. Running: cut until its live completion. Unknown: its completion was the
         one lost, so an own turn settles as unknown now. Unlisted: it ended in the hole."""
-        from hermes_cli.gateway_replay_gap import pending_status, settled
+        from hermes_cli.gateway_replay_gap import pending_status
         status = pending_status(self.pending, admission)
         if status == "unknown" and admission in self.mine:
             self._complete(admission, {"outcome": "unknown", "text": _UNKNOWN_OUTCOME})
@@ -214,6 +215,10 @@ class GatewayChatView:
         self.cut.setdefault(admission, self.streams.pop(admission, ""))
         if status or any(kind == "message.complete" and own == admission for kind, own, _ in self._finite_events):
             return  # (its completion already arrived, held for the submit ack)
+        await self._read_settled(admission, sid)
+
+    async def _read_settled(self, admission, sid, *, request_replayed=False):
+        from hermes_cli.gateway_replay_gap import settled
         try:
             receipt = await self.client.rpc("prompt.receipt", session_id=sid, admission_id=admission, include_result=True)
         except Exception:  # health: allow BLE001 -- unreadable, like a receipt without its reply
@@ -221,7 +226,7 @@ class GatewayChatView:
         verdict = settled(receipt) if self.session_id == sid and admission not in self.completions else False
         if verdict:
             outcome = {"interrupted": "cancelled"}.get(receipt.get("outcome"), receipt.get("outcome"))
-            self._complete(admission, {"outcome": outcome, "_receipt": receipt,
+            self._complete(admission, {"outcome": outcome, "_receipt": receipt, "request_replayed": request_replayed,
                                        "text": (receipt.get("result") or {}).get("final_response") or ""})
             self.changed.set()
         elif verdict is None and self.finite:  # unreadable: fails as before (interactive: the next gap retries)
@@ -344,7 +349,7 @@ class GatewayChatView:
         self.mutations.retire(self.session_id)
         sid, gaps = self.session_id, self.gaps
         receipt = await self.client.rpc("prompt.submit", session_id=self.session_id,
-                                        input_id=uuid.uuid4().hex, text=text,
+                                        input_id=self.request_input_id or uuid.uuid4().hex, text=text,
                                         **({"finite": True} if self.finite else {}),
                                         **({"unattended": True} if self.finite and self.unattended else {}))
         if (receipt or {}).get("voice_stopped") is True:
@@ -357,7 +362,9 @@ class GatewayChatView:
         admission = (receipt or {}).get("admission_id")
         if admission and admission not in self.completions and self.session_id == sid:
             self.mine[admission] = None
-            if self.gaps != gaps:  # a re-attach left after this submit: its snapshot covers it
+            if self.request_input_id and receipt.get("status") == "terminal":
+                await self._read_settled(admission, sid, request_replayed=True)
+            elif self.gaps != gaps:  # a re-attach left after this submit: its snapshot covers it
                 async with self._attaching:
                     if admission not in self.cut and not self.failure:
                         await self._recover(admission, sid)
@@ -584,6 +591,7 @@ class GatewayChatView:
                     self._write_usage_file(result, outcome)
                 if self.emitter is not None:
                     return self.emitter.emit_result({**result, "final_response": text,
+                                                     "request_replayed": bool(terminal.get("request_replayed")),
                                                      "replay_gap": bool(terminal.get("replay_gap"))},
                                                     session_id=self.session_id, exit_code=exit_code)
                 self._report_silent_interrupt(text, result)

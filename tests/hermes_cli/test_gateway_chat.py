@@ -8,7 +8,7 @@ def test_unsupported_launch_options_fail_before_connection(monkeypatch, capsys):
     from hermes_cli import gateway_chat
     calls = []
     monkeypatch.setattr(gateway_chat, "connect_gateway", lambda: calls.append(True))
-    for option in ("image", "worktree", "run_budget"):
+    for option in ("image", "worktree", "compact"):
         args = argparse.Namespace(**{option: True})
         assert gateway_chat.launch_from_args(args) == 2
         assert option.replace("_", "-") in capsys.readouterr().err
@@ -38,15 +38,25 @@ def test_resume_repeating_source_desktop_matches_the_stored_gui_session():
     gateway_chat.check_resume_policy(argparse.Namespace(resume="stored", source="desktop", query="x"), frozen)
 
 
+def test_run_budget_is_forwarded_and_must_match_on_resume():
+    from hermes_cli import gateway_chat
+    created = gateway_chat._requested_policy(argparse.Namespace(run_budget=37.5))
+    assert created == {"run_budget": 37.5}
+    snapshot = {"info": {"launch_request": created}}
+    gateway_chat.check_resume_policy(argparse.Namespace(run_budget=37.5), snapshot)
+    with pytest.raises(ValueError, match="run-budget"):
+        gateway_chat.check_resume_policy(argparse.Namespace(run_budget=38.5), snapshot)
+
+
 def test_refusals_name_the_replacement_and_a_runnable_safe_mode_example(monkeypatch, capsys):
     """An exit-2 refusal tells the user where every refused flag went; the safe-mode
     refusal prints a command they can run as-is."""
     from hermes_cli import gateway_chat
     monkeypatch.setattr(gateway_chat, "connect_gateway", lambda: pytest.fail("connected"))
-    assert gateway_chat.launch_from_args(argparse.Namespace(worktree=True, run_budget=30.0)) == 2
+    assert gateway_chat.launch_from_args(argparse.Namespace(worktree=True, compact=True)) == 2
     err = capsys.readouterr().err
     assert "--worktree: use" in err and "hermes --tui -w" in err
-    assert "--run-budget: use" in err and "run_budget_seconds" in err
+    assert "--compact: use" in err and "display.compact" in err
     for name in gateway_chat._UNSUPPORTED:
         assert name in gateway_chat._RELOCATED, f"{name} refused without saying where it went"
     assert gateway_chat.launch_from_args(argparse.Namespace(safe_mode=True, query="x")) == 1
@@ -351,3 +361,13 @@ async def test_oneshot_z_writes_no_session_lines_to_stderr_like_main(monkeypatch
     assert await gateway_chat.run_gateway_chat(argparse.Namespace(query="q", quiet=True)) == 0
     err = capsys.readouterr().err
     assert "Session: stored-z" in err and "session_id: stored-z" in err
+
+
+def test_structured_request_key_refuses_ambiguous_launches():
+    from hermes_cli import gateway_chat
+    for args in ({"request_key": ""}, {"request_key": "two words"}, {"request_key": "key", "resume": "old"},
+                 {"request_key": "key", "continue_last": True}, {"request_key": "key", "output_format": "text"}):
+        flags = {"output_format": "stream-json", **args}
+        with pytest.raises(gateway_chat.GatewayClientError, match="request-key"):
+            gateway_chat.validate_options(argparse.Namespace(**flags))
+    gateway_chat.validate_options(argparse.Namespace(request_key="proof.5-a", output_format="stream-json"))

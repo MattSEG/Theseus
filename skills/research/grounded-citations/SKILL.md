@@ -1,6 +1,6 @@
 ---
 name: grounded-citations
-description: "Ground answers and documents in cited, verifiable sources."
+description: "Build a numbered source ledger for external-source research. Local investigation briefs already supply their citations."
 version: 1.2.0
 author: Hermes Agent + Teknium
 license: MIT

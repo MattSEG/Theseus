@@ -107,6 +107,30 @@ describe('artifactContentHash', () => {
 })
 
 describe('artifactDownloadName', () => {
+  it('preserves document titles ending in a version and supplies the format', () => {
+    expect(artifactDownloadName('html', 'html', 'Theseus Run 1.2')).toBe('Theseus-Run-1.2.html')
+  })
+
+  it('handles other title suffixes and preserves explicit document formats', () => {
+    expect(artifactDownloadName('svg', 'svg', 'Panel 7.14')).toBe('Panel-7.14.svg')
+    expect(artifactDownloadName('html', 'html', 'Archive.org')).toBe('Archive.org.html')
+    expect(artifactDownloadName('html', 'html', 'brief.HTM')).toBe('brief.HTM')
+    expect(artifactDownloadName('svg', 'svg', 'parts.SVG')).toBe('parts.SVG')
+  })
+
+  it('keeps the edition in the filename of a long document title', () => {
+    const title = 'ARC Engineering Brand Review Checklist for Print and Digital Edition 6.0'
+    expect(artifactDownloadName('html', 'html', title)).toBe(title.replaceAll(' ', '-') + '.html')
+  })
+
+  it('distinguishes long SVG revisions with the same 60-character prefix', () => {
+    const stem = 'x'.repeat(60)
+    for (const revision of ['-alpha.SVG', '-beta.svg']) {
+      expect(artifactDownloadName('svg', 'svg', stem + revision)).toBe(stem + revision)
+    }
+    expect(artifactDownloadName('code', 'python', stem + 'y')).toBe(stem + '.py')
+  })
+
   it('keeps an existing extension', () => {
     expect(artifactDownloadName('code', 'python', 'server.py')).toBe('server.py')
   })

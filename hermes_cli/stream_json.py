@@ -19,6 +19,9 @@ def stream_json_requested(args) -> bool:
     """True when ``--format stream-json`` was passed; exits 2 on the combinations the protocol forbids
     (no query to answer, or the interactive TUI transport) and forces quiet mode on ``args``."""
     if getattr(args, "output_format", "text") != "stream-json":
+        if getattr(args, "request_key", None) is not None:
+            print("Error: --request-key requires --format stream-json.", file=sys.stderr)
+            raise SystemExit(2)
         return False
     if not (getattr(args, "query", None) or getattr(args, "query_file", None)):
         print("Error: --format stream-json requires -q/--query.", file=sys.stderr)
@@ -96,6 +99,8 @@ class StreamJsonEmitter:
                    "duration_ms": int((time.time() - self._start) * 1000)}
         if data.get("error"):
             payload["error"] = str(data["error"])
+        if data.get("request_replayed"):
+            payload["request_replayed"] = True
         if data.get("replay_gap"):
             # The viewer fell behind and re-attached: ``text`` events stopped there; ``text`` is the whole reply.
             payload["replay_gap"] = True

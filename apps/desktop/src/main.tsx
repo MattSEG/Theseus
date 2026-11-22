@@ -63,7 +63,9 @@ if (import.meta.env.MODE !== 'production' || import.meta.env.VITE_PERF_PROBE ===
 
 const winParam = new URLSearchParams(window.location.search).get('win')
 
-if (winParam === 'hud') {
+if (import.meta.env.VITE_THESEUS_DESKTOP === '1') {
+  document.title = winParam === 'hud' ? 'Theseus Desktop HUD' : 'Theseus Desktop'
+} else if (winParam === 'hud') {
   document.title = 'Hermes HUD'
 }
 

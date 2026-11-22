@@ -99,7 +99,8 @@ export function backendOwnedByApp({ ownedBackendCount, primaryRouteKind }: Backe
 export function quitPromptFor(
   work: ActiveWork,
   quittingForHandoff: boolean,
-  backendOwned: boolean = true
+  backendOwned: boolean = true,
+  displayName = 'Hermes'
 ): null | QuitPrompt {
   if (quittingForHandoff || work.count < 1) {
     return null
@@ -120,12 +121,12 @@ export function quitPromptFor(
       lines.length > 0 ? '' : null,
       backendOwned
         ? 'Quitting stops the agent mid-turn. Any work it has not finished writing is lost.'
-        : 'The agent keeps running on the gateway. Quitting only closes Hermes on this computer; reconnect later to see the results.'
+        : `The agent keeps running on the gateway. Quitting only closes ${displayName} on this computer. Reconnect later to see the results.`
     ]
       .filter(line => line !== null)
       .join('\n')
       .trim(),
-    message: work.count === 1 ? 'Hermes is still working on 1 chat.' : `Hermes is still working on ${work.count} chats.`
+    message: `${displayName} is still working on ${work.count} ${work.count === 1 ? 'chat' : 'chats'}.`
   }
 }
 

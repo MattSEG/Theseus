@@ -701,6 +701,11 @@ async function driveAction(
   // The witness the locate trip armed. No record means the input never reached
   // the document, which the agent must hear about — every other signal here
   // travels on the script channel and would report success regardless.
+  if (!hit && action.kind === 'click' && found.destination && found.url && found.url !== result.url
+      && result.url === found.destination) {
+    return { ...result, acted, note: 'The requested link destination opened.', success: true }
+  }
+
   if (!hit && CLICKS.indexOf(action.kind) !== -1) {
     return {
       ...result,

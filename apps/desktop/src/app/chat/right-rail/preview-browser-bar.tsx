@@ -39,6 +39,7 @@ interface PreviewBrowserBarProps {
   onBack: () => void
   /** The pane's Close — the one visible way out of a full-width Browser. */
   onClose?: () => void
+  onCapture?: () => void
   onFlushComments?: () => void
   onForward: () => void
   onNavigate: (url: string) => void
@@ -116,6 +117,7 @@ export function PreviewBrowserBar({
   loading,
   onBack,
   onClose,
+  onCapture,
   onFlushComments,
   onForward,
   onNavigate,
@@ -231,6 +233,13 @@ export function PreviewBrowserBar({
         />
       </div>
       {tabId ? <PreviewVaultButton tabId={tabId} url={url} /> : null}
+      {onCapture ? (
+        <PaneStripGlyph
+          icon={<Codicon name="device-camera" size="0.8125rem" />}
+          label="Download preview screenshot"
+          onSelect={onCapture}
+        />
+      ) : null}
       {onToggleAnnotate ? (
         <PaneStripGlyph
           active={annotateMode}

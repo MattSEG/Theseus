@@ -117,7 +117,7 @@ function versionItem(
     hidden: status.unknown || hidden,
     icon: applying ? <Loader2 className="size-3 animate-spin" /> : <Hash className="size-3" />,
     id: `version-${target}`,
-    label: status.label,
+    label: target === 'client' && import.meta.env.VITE_THESEUS_DESKTOP === '1' ? `Theseus · ${status.label}` : status.label,
     // Update state is not a preference: hiding it is how a user misses that
     // they are behind. Listed in the menu, but locked on.
     lockedVisible: true,

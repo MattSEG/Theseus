@@ -77,10 +77,12 @@ function stripTags(value: string): string {
     .trim()
 }
 
+const DOCUMENT_TITLE_LIMIT = 80
+
 function titleFromTag(content: string, tag: 'h1' | 'title'): string {
   const match = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i').exec(content)
 
-  return match ? stripTags(match[1] || '').slice(0, 80) : ''
+  return match ? stripTags(match[1] || '').slice(0, DOCUMENT_TITLE_LIMIT) : ''
 }
 
 const CODE_DECLARATION_RE =
@@ -224,9 +226,13 @@ export function artifactDownloadName(kind: ArtifactKind, language: string, title
       .replace(/[^\p{L}\p{N}._ -]+/gu, '')
       .trim()
       .replace(/\s+/g, '-')
-      .slice(0, 60) || 'artifact'
+      .slice(0, kind === 'code' ? 60 : DOCUMENT_TITLE_LIMIT) || 'artifact'
 
-  if (/\.[a-z0-9]{1,8}$/i.test(base)) {
+  // Document titles can end in a version or a project name such as Example.org.
+  // A code artifact may instead carry an explicit source filename.
+  const hasExtension = kind === 'html' ? /\.html?$/i : kind === 'svg' ? /\.svg$/i : /\.[a-z0-9]{1,8}$/i
+
+  if (hasExtension.test(base)) {
     return base
   }
 

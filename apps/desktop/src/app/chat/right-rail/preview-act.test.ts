@@ -572,6 +572,22 @@ describe('actOnActivePreview (drive_preview tool)', () => {
     expect(result.error).toContain('never reached the page')
   })
 
+  it.each([
+    ['https://example.test/destination', true],
+    ['https://example.test/unrelated', false],
+    ['https://example.test/source', false]
+  ] as const)('checks a replaced pointer witness against the link destination %s', async (url, expected) => {
+    const tabId = openBrowserTab()
+    cleanups.push(registerPreviewScriptRunner(tabId, async code => JSON.stringify(
+      code.includes('"kind":"locate"')
+        ? { acted: 'looking at link', destination: 'https://example.test/destination', point: { x: 2, y: 3 },
+            success: true, url: 'https://example.test/source' }
+        : { elements: [], hit: null, success: true, url }
+    )))
+    cleanups.push(registerPreviewInput(tabId, { focus: vi.fn(), send: vi.fn() }))
+    expect((await actOnActivePreview({ kind: 'click', ref: '@e1' })).success).toBe(expected)
+  })
+
   it('fails without sending input when locating the target times out', async () => {
     vi.useFakeTimers()
     const send = vi.fn()

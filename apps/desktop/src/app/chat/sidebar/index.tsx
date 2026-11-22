@@ -192,6 +192,7 @@ import {
   SidebarStorageCorruptNotice
 } from './section-states'
 import { buildSessionByAnyId, resolvePinnedSessions } from './session-index'
+import { LearningJobs } from './learning-jobs'
 import { SidebarSessionsSection, VIRTUALIZE_THRESHOLD } from './sessions-section'
 import { CONTEXT_SPLIT_KIT, SplitSubmenu } from './split-submenu'
 import { useEnteredProjectSessions } from './use-entered-project-sessions'
@@ -1702,6 +1703,9 @@ export function ChatSidebar({
         </SidebarGroup>
 
         <SidebarStorageCorruptNotice />
+        {showSessionSections && (profileScope === 'default' || profileScope === ALL_PROFILES) && (
+          <LearningJobs directory={import.meta.env.VITE_THESEUS_LEARNING_DIR} key={activeConnectionId} />
+        )}
 
         {showSessionSections && (
           <div className="shrink-0 px-2 pb-1 pt-1">

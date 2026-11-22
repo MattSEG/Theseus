@@ -9,6 +9,7 @@ import type { SubmitTextOptions } from '@/app/session/hooks/use-prompt-actions/u
 import { sessionShouldHaveTranscript } from '@/app/session/hooks/use-session-actions/utils'
 import { Thread } from '@/components/assistant-ui/thread'
 import { TranscriptWindowProvider } from '@/components/assistant-ui/thread/transcript-window'
+import { SessionAmbient } from '../theseus-appearance/ambient'
 import { Backdrop } from '@/components/Backdrop'
 import { COMPOSER_HEART_CONFIG, HeartField } from '@/components/chat/vibe-hearts'
 import { useSetupChatView } from '@/components/onboarding/first-run/assembly'
@@ -784,6 +785,7 @@ const ChatViewContent = memo(function ChatViewContent({
       data-setup-chat={setupChat ? '' : undefined}
     >
       <Backdrop />
+      {import.meta.env.VITE_THESEUS_DESKTOP === '1' && isPrimary && <SessionAmbient busy={busy} awaiting={awaitingResponse} />}
       {/* Tiles get their chrome from the layout zone (chip strip); the modal
           prompt overlays stay active-session-scoped in the primary surface. */}
       {isPrimary && (

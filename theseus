@@ -1,0 +1,95 @@
+#!/bin/sh
+# Launch the local Theseus checkout against its private Mac profile.
+set -eu
+repo=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+profile="$HOME/.theseus"
+private_path="$profile/toolchain/node_modules/.bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin"
+umask 077
+cd "$repo"
+case "${1:-}" in
+  -h|--help)
+    cat <<'EOF'
+Theseus local commands
+
+  desktop                          Launch Theseus Desktop
+  identity [--session ID]          Verify the gateway profile or a completed model session
+  project-memory [--trial NAME]    Query approved project memory or an isolated candidate
+  learning                         Retrieve, evaluate and review harness experiments
+  learning compare-rule            Replay the causal rule in 18 packaged-app chats
+  chat-receipt KEY                 Inspect a keyed chat without starting the gateway
+  deliver                          Deliver or resume a local artifact
+  shadow                           Opt in to decision observations or inspect history
+  proof                            Review an artifact and check its evidence
+  vision                           Compare screenshots or locate a visible element
+  crash                            Start or score a bounded Desktop workflow trial
+
+Use --help with project-memory, learning, deliver, proof, vision or crash for options. Hermes commands follow.
+
+EOF
+    exec env -i HOME="$HOME" USER="$USER" PATH="$private_path" HERMES_HOME="$profile" \
+      HERMES_RUNTIME_DIR="$profile/runtime" "$repo/.venv/bin/python" hermes --help ;;
+  project-memory)
+    shift
+    memory_home="$profile"
+    memory_script="$profile/skills/research/project-recall/scripts/recall.py"
+    if [ "${1:-}" = "--trial" ]; then
+      trial_name="${2:-}"
+      case "$trial_name" in
+        ''|-*|*[!A-Za-z0-9_-]*) echo "Choose an alphanumeric trial name, optionally with hyphens or underscores." >&2; exit 2 ;;
+      esac
+      if [ "${#trial_name}" -gt 64 ]; then echo "Choose a trial name up to 64 characters." >&2; exit 2; fi
+      shift 2
+      memory_home="$profile/trials/project-memory/$trial_name"
+      memory_script="$repo/skills/research/project-recall/scripts/recall.py"
+      mkdir -p "$memory_home"
+    fi
+    if [ "${1:-}" = "--help" ]; then
+      echo "Use ./theseus project-memory --trial NAME COMMAND to test checkout changes in a named local trial."
+    fi
+    exec env -i HOME="$HOME" USER="$USER" PATH="$private_path" HERMES_HOME="$memory_home" \
+      "$repo/.venv/bin/python" "$memory_script" "$@" ;;
+  desktop)
+    cd apps/desktop
+    exec env -i HOME="$HOME" USER="$USER" TMPDIR="${TMPDIR:-/tmp}" PATH="$private_path" \
+      HERMES_HOME="$profile" HERMES_RUNTIME_DIR="$profile/runtime" \
+      VITE_THESEUS_DESKTOP=1 VITE_THESEUS_LEARNING_DIR="$profile/learning-runs" HERMES_DESKTOP_USER_DATA_DIR="$profile/desktop" HERMES_DESKTOP_CDP_PORT=off \
+      HERMES_DESKTOP_PYTHON="$repo/.venv/bin/python" pnpm dev ;;
+  chat-receipt)
+    shift
+    exec env -i HOME="$HOME" PATH="$private_path" HERMES_HOME="$profile" \
+      "$repo/.venv/bin/python" -m hermes_cli.keyed_chat_receipt "$@" ;;
+  identity)
+    shift
+    exec env -i HOME="$HOME" USER="$USER" PATH="$private_path" HERMES_HOME="$profile" HERMES_RUNTIME_DIR="$profile/runtime" \
+      "$repo/.venv/bin/python" -m scripts.theseus_identity "$@" ;;
+  deliver)
+    shift
+    exec env -i HOME="$HOME" PATH="$private_path" HERMES_HOME="$profile" \
+      "$repo/.venv/bin/python" skills/software-development/learning-run/scripts/deliver.py "$@" ;;
+  vision)
+    shift
+    exec env -i HOME="$HOME" USER="$USER" PATH="$private_path" HERMES_HOME="$profile" \
+      "$repo/.venv/bin/python" skills/software-development/learning-run/scripts/vision.py "$@" ;;
+  crash)
+    shift
+    exec env -i HOME="$HOME" PATH="$private_path" HERMES_HOME="$profile" \
+      "$repo/.venv/bin/python" evals/desktop_workflow/trial.py "$@" ;;
+  shadow)
+    shift
+    exec env -i HOME="$HOME" USER="$USER" PATH="$private_path" HERMES_HOME="$profile" "$repo/.venv/bin/python" -m hermes_cli.theseus_shadow "$@" ;;
+  proof)
+    shift
+    exec env -i HOME="$HOME" USER="$USER" PATH="$private_path" HERMES_HOME="$profile" \
+      "$repo/.venv/bin/python" skills/software-development/learning-run/scripts/proof.py "$@" ;;
+  learning)
+    shift
+    if [ "${1:-}" = compare-rule ]; then
+      shift
+      exec "$repo/.venv/bin/python" scripts/theseus-rule-trial/run.py "$@"
+    fi
+    exec env -i HOME="$HOME" USER="$USER" PATH="$private_path" HERMES_HOME="$profile" \
+      "$repo/.venv/bin/python" skills/software-development/learning-run/scripts/run.py "$@" ;;
+  *)
+    exec env -i HOME="$HOME" USER="$USER" PATH="$private_path" HERMES_HOME="$profile" \
+      HERMES_RUNTIME_DIR="$profile/runtime" "$repo/.venv/bin/python" hermes "$@" ;;
+esac

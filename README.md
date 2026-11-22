@@ -1,3 +1,7 @@
+# Theseus
+
+Theseus is a local-first fork of Hermes Agent. It records why a harness change was tried, what happened during testing, and whether a reviewer kept or reverted it. The [fork notes](THESEUS-NOTES.md) cover the first experiments, the approved change to proposal drafting, and how to run the checks.
+
 <p align="center">
   <img src="assets/banner.png" alt="Hermes Agent" width="100%">
 </p>

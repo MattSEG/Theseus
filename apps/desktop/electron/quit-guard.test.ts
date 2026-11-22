@@ -151,3 +151,9 @@ test('an idle cache does not resurrect finished work', () => {
 
   assert.equal(merged.count, 0)
 })
+
+test('the native quit sheet names the running desktop product', () => {
+  const prompt = quitPromptFor({ count: 1, titles: ['Compare source receipts'] }, false, false, 'Theseus')
+  assert.equal(prompt?.message, 'Theseus is still working on 1 chat.')
+  assert.match(prompt?.detail ?? '', /only closes Theseus on this computer/)
+})

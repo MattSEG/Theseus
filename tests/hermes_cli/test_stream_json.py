@@ -135,3 +135,13 @@ def test_chat_stream_json_rejects_interactive_combinations(monkeypatch, capsys, 
         cli_entry.cmd_chat(parser.parse_args(argv))
     assert exc_info.value.code == 2
     assert message in capsys.readouterr().err
+
+
+def test_explicit_retry_marks_the_replayed_result(capsys):
+    from argparse import Namespace
+    from hermes_cli.stream_json import stream_json_requested
+    with pytest.raises(SystemExit):
+        stream_json_requested(Namespace(output_format="text", request_key="job"))
+    emitter = StreamJsonEmitter()
+    emitter.emit_result({"request_replayed": True, "final_response": "saved"}, session_id="job")
+    assert _events(capsys)[-1]["request_replayed"] is True
